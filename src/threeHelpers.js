@@ -44,7 +44,7 @@ function roundRect(ctx, x, y, w, h, r) {
   ctx.stroke();
 }
 
-function makeTextSprite(message, parameters = {}) {
+export function makeTextSprite(message, parameters = {}) {
   const {
     fontface = "Arial",
     fontsize = 18,
@@ -53,46 +53,67 @@ function makeTextSprite(message, parameters = {}) {
     backgroundColor = { r: 255, g: 255, b: 255, a: 1.0 },
     textColor = { r: 0, g: 0, b: 0, a: 1.0 }
   } = parameters;
+  return new Promise(resolve => {
+    const canvas = document.createElement("canvas");
 
-  const canvas = document.createElement("canvas");
-  const context = canvas.getContext("2d");
-  context.font = `Bold ${fontsize}px ${fontface}`;
-  const metrics = context.measureText(message);
-  const textWidth = metrics.width;
+    const context = canvas.getContext("2d");
+    canvas.width = 1024;
+    canvas.height = 512;
+    context.font = `Bold ${fontsize}px ${fontface}`;
+    const metrics = context.measureText(message);
+    const textWidth = metrics.width;
 
-  context.fillStyle = `rgba(${backgroundColor.r},${backgroundColor.g},${
-    backgroundColor.b
-  },${backgroundColor.a})`;
-  context.strokeStyle = `rgba(${borderColor.r},${borderColor.g},${
-    borderColor.b
-  },${borderColor.a})`;
+    context.fillStyle = `rgba(${backgroundColor.r},${backgroundColor.g},${
+      backgroundColor.b
+    },${backgroundColor.a})`;
+    context.strokeStyle = `rgba(${borderColor.r},${borderColor.g},${
+      borderColor.b
+    },${borderColor.a})`;
 
-  context.lineWidth = borderThickness;
-  roundRect(
-    context,
-    borderThickness / 2,
-    borderThickness / 2,
-    (textWidth + borderThickness) * 1.1,
-    fontsize * 1.4 + borderThickness,
-    8
-  );
+    context.lineWidth = borderThickness;
+    roundRect(
+      context,
+      borderThickness / 2,
+      borderThickness / 2,
+      (textWidth + borderThickness) * 1.1,
+      fontsize * 1.4 + borderThickness,
+      8
+    );
 
-  context.fillStyle = `rgba(${textColor.r},${textColor.g},${textColor.b},${
-    textColor.a
-  })`;
-  context.fillText(message, borderThickness, fontsize + borderThickness);
+    context.fillStyle = `rgba(${textColor.r},${textColor.g},${textColor.b},${
+      textColor.a
+    })`;
+    context.fillText(
+      message,
+      borderThickness,
+      fontsize + borderThickness,
+      canvas.width
+    );
 
-  const texture = new THREE.Texture(canvas);
-  texture.needsUpdate = true;
+    const texture = new THREE.Texture(canvas);
+    texture.needsUpdate = true;
 
-  const spriteMaterial = new THREE.SpriteMaterial({
-    map: texture
+    const spriteMaterial = new THREE.SpriteMaterial({
+      map: texture
+    });
+    const label = new THREE.Sprite(spriteMaterial);
+    label.scale.set(0.5 * fontsize, 0.25 * fontsize, 0.75 * fontsize);
+    label.userData.isLabel = true;
+    return resolve(label);
   });
-  const sprite = new THREE.Sprite(spriteMaterial);
-  sprite.scale.set(0.5 * fontsize, 0.25 * fontsize, 0.75 * fontsize);
-  return sprite;
 }
 
+function randomOnSphere(size) {
+  let x = 1;
+  let y = 1;
+  let z = 1;
+  while (Math.pow(x, 2) + Math.pow(y, 2) + Math.pow(z, 2) > 1) {
+    x = (Math.random() - 0.5) * 2;
+    y = (Math.random() - 0.5) * 2;
+    z = (Math.random() - 0.5) * 2;
+  }
+  return { x: x * size, y: y * size, z: z * size };
+}
 export function makeStars(SKY_SIZE, scene) {
   const sprites = [
     new THREE.TextureLoader().load(require("./img/star1.png")),
@@ -101,7 +122,7 @@ export function makeStars(SKY_SIZE, scene) {
     new THREE.TextureLoader().load(require("./img/star4.png"))
   ];
 
-  for (let i = 0; i < 50; i++) {
+  for (let i = 0; i < 1000; i++) {
     const spriteMaterial = new THREE.SpriteMaterial({
       map: randomFromList(sprites),
       alphaTest: 0.5,
@@ -110,81 +131,24 @@ export function makeStars(SKY_SIZE, scene) {
     spriteMaterial.color.setHSL(Math.random(), 0.5, 0.7);
 
     const sprite = new THREE.Sprite(spriteMaterial);
-    sprite.scale.set(5, 5, 1);
-    const x = SKY_SIZE / 2.5 * Math.random() - SKY_SIZE / 5;
-    const y = SKY_SIZE / 2.5 * Math.random() - SKY_SIZE / 5;
-    const z = SKY_SIZE / 2.5 * Math.random() - SKY_SIZE / 5;
+    sprite.scale.set(30, 30, 1);
+    const { x, y, z } = randomOnSphere(SKY_SIZE / 4);
+
     sprite.position.set(x, y, z);
     const name = randomFromList(systemNames);
     sprite.userData.name = name;
-    const label = makeTextSprite(name, {
+    sprite.name = name;
+    makeTextSprite(name, {
       textColor: { r: 255, g: 255, b: 255, a: 1 },
       backgroundColor: { r: 0, g: 0, b: 0, a: 0.5 },
-      fontsize: 30
+      fontsize: 200
+    }).then(label => {
+      label.position.set(x, y - 20, z + 10);
+      sprite.labelSprite = label;
+      label.visible = false;
     });
-    label.position.set(x, y - 20, z + 10);
-    label.visible = false;
-    label.userData.isLabel = true;
-    sprite.userData.labelId = label.uuid;
     scene.add(sprite);
-    scene.add(label);
   }
-}
-
-export function makeLines(SKY_SIZE, LINE_COUNT) {
-  const lineMaterial = new THREE.LineBasicMaterial({
-    color: 0xffffff,
-    opacity: 0.2,
-    transparent: true
-  });
-
-  const negEnd = SKY_SIZE / -2;
-  const posEnd = SKY_SIZE / 2;
-  const lines = new THREE.Object3D();
-
-  for (let i = 0; i < LINE_COUNT + 1; i++) {
-    const linePosi = (i - LINE_COUNT / 2) * (SKY_SIZE / LINE_COUNT);
-    for (let j = 0; j < LINE_COUNT + 1; j++) {
-      const linePosj = (j - LINE_COUNT / 2) * (SKY_SIZE / LINE_COUNT);
-
-      // X
-      const lineGeometryX = new THREE.Geometry();
-      lineGeometryX.vertices.push(
-        new THREE.Vector3(negEnd, linePosi, linePosj)
-      );
-      lineGeometryX.vertices.push(
-        new THREE.Vector3(posEnd, linePosi, linePosj)
-      );
-      const lineX = new THREE.Line(lineGeometryX, lineMaterial);
-      lineX.userData.noRaycast = true;
-      lines.add(lineX);
-
-      // Y
-      const lineGeometryY = new THREE.Geometry();
-      lineGeometryY.vertices.push(
-        new THREE.Vector3(linePosi, negEnd, linePosj)
-      );
-      lineGeometryY.vertices.push(
-        new THREE.Vector3(linePosi, posEnd, linePosj)
-      );
-      const lineY = new THREE.Line(lineGeometryY, lineMaterial);
-      lineY.userData.noRaycast = true;
-      lines.add(lineY);
-
-      // Z
-      const lineGeometryZ = new THREE.Geometry();
-      lineGeometryZ.vertices.push(
-        new THREE.Vector3(linePosj, linePosi, negEnd)
-      );
-      lineGeometryZ.vertices.push(
-        new THREE.Vector3(linePosj, linePosi, posEnd)
-      );
-      const lineZ = new THREE.Line(lineGeometryZ, lineMaterial);
-      lineZ.userData.noRaycast = true;
-      lines.add(lineZ);
-    }
-  }
-  return lines;
 }
 
 export function makeLights(scene) {
@@ -199,7 +163,7 @@ export function makeLights(scene) {
   scene.add(light2);
 }
 
-export function makeSkybox(SKY_SIZE, scene) {
+export function makeSkybox(SKY_SIZE) {
   const urls = [
     new THREE.TextureLoader().load(require("./img/StarsRight.png")),
     new THREE.TextureLoader().load(require("./img/StarsLeft.png")),
@@ -223,10 +187,9 @@ export function makeSkybox(SKY_SIZE, scene) {
   });
 
   const skyGeometry = new THREE.CubeGeometry(SKY_SIZE, SKY_SIZE, SKY_SIZE);
-  const skyMaterial = new THREE.MeshFaceMaterial(materialArray);
-  const skyBox = new THREE.Mesh(skyGeometry, skyMaterial);
+  const skyBox = new THREE.Mesh(skyGeometry, materialArray);
   skyBox.rotation.x += Math.PI / 2;
   skyBox.userData.noRaycast = true;
 
-  scene.add(skyBox);
+  return skyBox;
 }

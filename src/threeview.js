@@ -2,13 +2,7 @@ import React, { Component } from "react";
 import * as THREE from "three";
 //import { degtorad } from "./protractor";
 import TWEEN from "@tweenjs/tween.js";
-import {
-  makeStars,
-  //makeLines,
-  makeLights,
-  makeSkybox,
-  makeShip
-} from "./threeHelpers";
+import { makeStars, makeLights, makeSkybox, makeShip } from "./threeHelpers";
 const OrbitControls = require("three-orbit-controls")(THREE);
 
 class ThreeView extends Component {
@@ -24,10 +18,11 @@ class ThreeView extends Component {
       roll: 0,
       names: []
     };
-
-    const { width, height } = props;
+  }
+  createScene() {
+    const { width, height } = this.props;
     this.scene = new THREE.Scene();
-
+    this.intersects = [];
     this.raycaster = new THREE.Raycaster();
     this.mouse = new THREE.Vector2();
 
@@ -37,19 +32,17 @@ class ThreeView extends Component {
     );
     this.cameras.push(
       new THREE.OrthographicCamera(
-        width / -10,
-        width / 10,
-        height / 10,
-        height / -10,
+        width / -2,
+        width / 2,
+        height / 2,
+        height / -2,
         0.01,
         100000
       )
     );
+    this.cameras[0].up.z = 1;
+    this.cameras[0].up.y = 0;
     this.currentCamera = 1;
-    this.cameras[0].position.y = 2;
-    this.cameras[0].position.z = 4;
-    this.cameras[0].lookAt(new THREE.Vector3(0, 0, 0));
-
     this.cameras[1].position.y = 1000;
     this.cameras[1].position.z = 0;
     this.cameras[1].up.z = 1;
@@ -58,10 +51,12 @@ class ThreeView extends Component {
 
     this.controls = new OrbitControls(
       this.cameras[this.currentCamera],
-      document.getElementById("three-container")
+      document.getElementById("three-mount")
     );
-    this.controls.maxZoom = 20;
-    this.controls.minZoom = 1;
+    this.controls.maxZoom = 3;
+    this.controls.minZoom = 0.65;
+    this.controls.maxDistance = 1500;
+    this.controls.minDistance = 20;
     this.controls.enableRotate = false;
     this.controls.mouseButtons = {
       ORBIT: THREE.MOUSE.RIGHT,
@@ -79,7 +74,7 @@ class ThreeView extends Component {
       fog: false
     });
     this.crosshair = new THREE.Sprite(material);
-    this.crosshair.scale.set(4, 4, 4);
+    this.crosshair.scale.set(15, 15, 15);
     this.crosshair.visible = false;
     this.scene.add(this.crosshair);
 
@@ -87,10 +82,12 @@ class ThreeView extends Component {
     this.LINE_COUNT = 10;
 
     makeLights(this.scene);
-    makeSkybox(this.SKY_SIZE, this.scene);
+    this.skybox = makeSkybox(this.SKY_SIZE);
+    this.scene.add(this.skybox);
     makeShip().then(ship => {
+      this.rig = new THREE.Object3D();
       this.ship = ship;
-      this.ship.add(this.cameras[1]);
+      this.rig.add(this.cameras[1]);
       const lineMaterial = new THREE.MeshBasicMaterial({
         color: 0xff0000
       });
@@ -98,25 +95,33 @@ class ThreeView extends Component {
       const line = new THREE.Mesh(lineGeometry, lineMaterial);
       line.position.z = 3;
       this.ship.add(line);
-      this.scene.add(this.ship);
-      this.ship.setRotationFromQuaternion(this.state.quaternion);
+      this.rig.add(this.ship);
+      this.rig.setRotationFromQuaternion(this.state.quaternion);
+      this.scene.add(this.rig);
     });
-    // this.lines = makeLines(this.SKY_SIZE, this.LINE_COUNT);
-    // this.scene.add(this.lines);
     makeStars(this.SKY_SIZE, this.scene);
   }
-
   componentDidUpdate() {
-    if (this.ship) {
-      this.ship.setRotationFromQuaternion(this.state.quaternion);
+    const { quaternion, search } = this.state;
+    const regex = new RegExp(search, "gi");
+    if (this.rig) {
+      this.rig.setRotationFromQuaternion(quaternion);
     }
+    this.scene.children.forEach(c => {
+      if (c.name.match(regex) || !search) {
+        c.visible = true;
+      } else if (c.name) {
+        c.visible = false;
+      }
+    });
   }
   componentDidMount() {
+    this.createScene();
     this.animating = true;
     this.animate();
 
     document
-      .getElementById("three-container")
+      .getElementById("three-mount")
       .appendChild(this.renderer.domElement);
     this.renderer.domElement.addEventListener(
       "mousemove",
@@ -152,12 +157,15 @@ class ThreeView extends Component {
       top,
       left
     } = this.renderer.domElement.getBoundingClientRect();
-    this.mouse.x = (event.clientX - left) / width * 2 - 1;
+    this.mouse.x = ((event.clientX - left) / width) * 2 - 1;
     this.mouse.y = -((event.clientY - top) / height) * 2 + 1;
   };
   onMouseDown = () => {
     for (let i = 0; i < this.scene.children.length; i++) {
       this.scene.children[i].userData.selected = false;
+      this.scene.remove(this.scene.children[i].labelSprite);
+      if (this.scene.children[i].labelSprite)
+        this.scene.children[i].labelSprite.visible = false;
     }
     if (this.intersects.length > 0) {
       const { x, y, z } = this.intersects[0].object.position;
@@ -169,11 +177,39 @@ class ThreeView extends Component {
     }
   };
   setView = which => {
+    if (which === "perspective") {
+      this.cameras[0].position.z = 300;
+      this.cameras[0].position.y = 200;
+      this.cameras[0].position.x = 300;
+      this.cameras[0].lookAt(new THREE.Vector3(0, 0, 0));
+      this.currentCamera = 0;
+      this.controls.target.set(0, 0, 0);
+
+      this.controls.enableRotate = true;
+      this.controls.enablePan = false;
+      this.controls.mouseButtons = {
+        ORBIT: THREE.MOUSE.LEFT,
+        ZOOM: THREE.MOUSE.MIDDLE,
+        PAN: THREE.MOUSE.RIGHT
+      };
+      // this.lines.visible = false;
+      this.controls.object = this.cameras[this.currentCamera];
+      this.controls.update();
+      return;
+    }
+    this.currentCamera = 1;
+
     const { x, y, z } = this.cameras[1].position.clone();
     const { x: ux, y: uy, z: uz } = this.cameras[1].up.clone();
     const { x: tx, y: ty, z: tz } = this.controls.target.clone();
     let [nx, ny, nz, nux, nuy, nuz] = [0, 0, 0, 0, 0, 0];
-
+    this.controls.enableRotate = false;
+    this.controls.enablePan = true;
+    this.controls.mouseButtons = {
+      ORBIT: THREE.MOUSE.RIGHT,
+      ZOOM: THREE.MOUSE.MIDDLE,
+      PAN: THREE.MOUSE.LEFT
+    };
     if (which === "side") {
       nx = -1000;
       nuy = 1;
@@ -207,21 +243,8 @@ class ThreeView extends Component {
         this.cameras[1].updateProjectionMatrix();
       })
       .start();
-    // if (which === "perspective") {
-    //   this.cameras[0].position.z = 300;
-    //   this.cameras[0].position.y = 200;
-    //   this.cameras[0].position.x = 0;
-    //   this.currentCamera = 0;
-    //   this.controls.enableRotate = true;
-    //   this.controls.enablePan = false;
-    //   this.controls.mouseButtons = {
-    //     ORBIT: THREE.MOUSE.LEFT,
-    //     ZOOM: THREE.MOUSE.MIDDLE,
-    //     PAN: THREE.MOUSE.RIGHT
-    //   };
-    //   this.lines.visible = false;
-    // }
-    // this.controls.object = this.cameras[this.currentCamera];
+
+    this.controls.object = this.cameras[this.currentCamera];
     this.controls.update();
   };
   animate = time => {
@@ -238,9 +261,9 @@ class ThreeView extends Component {
       });
     }
     if (this.ship) {
-      this.ship.scale.x = 20 / (this.cameras[this.currentCamera].zoom * 2 + 1);
-      this.ship.scale.y = 20 / (this.cameras[this.currentCamera].zoom * 2 + 1);
-      this.ship.scale.z = 20 / (this.cameras[this.currentCamera].zoom * 2 + 1);
+      this.ship.scale.x = 10 / (this.cameras[this.currentCamera].zoom * 2 + 1);
+      this.ship.scale.y = 10 / (this.cameras[this.currentCamera].zoom * 2 + 1);
+      this.ship.scale.z = 10 / (this.cameras[this.currentCamera].zoom * 2 + 1);
     }
 
     // Raycaster
@@ -248,32 +271,37 @@ class ThreeView extends Component {
     this.raycaster.setFromCamera(this.mouse, this.cameras[this.currentCamera]);
 
     // calculate objects intersecting the picking ray
-    this.intersects = this.raycaster
+    const newIntersects = this.raycaster
       .intersectObjects(this.scene.children)
       .filter(i => i.object.userData.name);
-    for (let i = 0; i < this.scene.children.length; i++) {
-      if (this.scene.children[i].userData.isLabel) {
-        if (
-          this.intersects.find(
-            c => c.object.userData.labelId === this.scene.children[i].uuid
-          ) ||
-          this.scene.children.find(
-            c =>
-              c.userData.labelId === this.scene.children[i].uuid &&
-              c.userData.selected
-          )
-        ) {
-          this.scene.children[i].visible = true;
-        } else {
-          this.scene.children[i].visible = false;
-        }
+    for (let i = 0; i < this.intersects.length; i++) {
+      if (
+        !newIntersects.find(
+          ni => ni.object.uuid === this.intersects[i].object.uuid
+        ) &&
+        !this.intersects[i].object.userData.selected
+      ) {
+        this.scene.remove(this.intersects[i].object.labelSprite);
+        this.intersects[i].object.labelSprite.visible = false;
       }
     }
-    this.controls.update();
+    this.intersects = newIntersects;
+    for (let i = 0; i < this.intersects.length; i++) {
+      if (
+        this.intersects[i].object.labelSprite &&
+        this.intersects[i].object.labelSprite.visible === false
+      ) {
+        console.log("Added");
+        this.scene.add(this.intersects[i].object.labelSprite);
+        this.intersects[i].object.labelSprite.visible = true;
+      }
+    }
+    this.controls && this.controls.update();
     this.renderer.render(this.scene, this.cameras[this.currentCamera]);
     this.frame = requestAnimationFrame(this.animate);
   };
   render() {
+    const { search } = this.state;
     return (
       <div>
         <div>
@@ -344,6 +372,15 @@ class ThreeView extends Component {
           <button onClick={() => this.setView("perspective")}>
             Perspective
           </button>
+          <input
+            type="text"
+            value={search}
+            onClick={e => {
+              e.target.focus();
+            }}
+            onChange={e => this.setState({ search: e.target.value })}
+            placeholder="Search..."
+          />
         </div>
         <div id="three-mount" />
       </div>
