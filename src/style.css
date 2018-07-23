@@ -1,0 +1,9 @@
+html,
+body,
+.App {
+  font-family: sans-serif;
+  text-align: center;
+  background-color: black;
+  margin: 0;
+  color: white;
+}
