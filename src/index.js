@@ -25,7 +25,7 @@ class App extends Component {
               ref={measureRef}
               style={{
                 width: "100vw",
-                height: "80vh"
+                height: "calc(100vh - 38px)"
               }}
             >
               {dimensions && <Three {...dimensions} />}
