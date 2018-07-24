@@ -1,1 +1,0 @@
-{"version":3,"sources":["style.css"],"names":[],"mappings":"AAAA,eAGE,uBACA,kBACA,sBACA,SACA,UAAa","file":"static/css/main.a89a602e.css","sourcesContent":["html,\nbody,\n.App {\n  font-family: sans-serif;\n  text-align: center;\n  background-color: black;\n  margin: 0;\n  color: white;\n}\n\n\n\n// WEBPACK FOOTER //\n// ./src/style.css"],"sourceRoot":""}
