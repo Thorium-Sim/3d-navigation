@@ -3,9 +3,10 @@ import * as THREE from "three";
 //import { degtorad } from "./protractor";
 import TWEEN from "@tweenjs/tween.js";
 import { makeStar, makeLights, makeSkybox, makeShip } from "../threeHelpers";
-import { makeCameras, makeControls, makeBase } from "./init";
+import { makeCameras, makeControls, makeBase, makeProtractor } from "./init";
 import { rotate, scale, labels } from "./animate";
 import { starsUpdate, searchUpdate } from "./update";
+import { Interaction } from "three.interaction";
 
 class ThreeView extends Component {
   SKY_SIZE = 2500;
@@ -14,6 +15,11 @@ class ThreeView extends Component {
     makeBase(this);
     makeCameras(this);
     makeControls(this);
+    this.interaction = new Interaction(
+      this.renderer,
+      this.scene,
+      this.cameras[this.currentCamera]
+    );
 
     const map = new THREE.TextureLoader().load(require("../img/crosshair.svg"));
     const material = new THREE.SpriteMaterial({
@@ -32,6 +38,8 @@ class ThreeView extends Component {
     this.skybox = makeSkybox(this.SKY_SIZE);
     this.scene.add(this.skybox);
     makeShip().then(ship => {
+      this.protractor = makeProtractor(this, ship);
+      this.scene.add(this.protractor);
       this.rig = new THREE.Object3D();
       this.ship = ship;
       this.rig.add(this.cameras[1]);
@@ -154,7 +162,7 @@ class ThreeView extends Component {
     const { x, y, z } = this.cameras[1].position.clone();
     const { x: ux, y: uy, z: uz } = this.cameras[1].up.clone();
     const { x: tx, y: ty, z: tz } = this.controls.target.clone();
-    let [nx, ny, nz, nux, nuy, nuz] = [0, 0, 0, 0, 0, 0];
+    let [nx, ny, nz, nux, nuy, nuz, nr] = [0, 0, 0, 0, 0, 0, 0];
     this.controls.enableRotate = false;
     this.controls.enablePan = true;
     this.controls.mouseButtons = {
@@ -165,12 +173,14 @@ class ThreeView extends Component {
     if (which === "side") {
       nx = -1000;
       nuy = 1;
+      nr = Math.PI / 2;
     }
     if (which === "top") {
       ny = 1000;
       nuz = 1;
     }
-    this.tween = new TWEEN.Tween({ x, y, z, ux, uy, uz, tx, ty, tz })
+    const r = this.protractor.rotation._x;
+    this.tween = new TWEEN.Tween({ x, y, z, ux, uy, uz, tx, ty, tz, r })
       .to(
         {
           x: nx,
@@ -181,18 +191,20 @@ class ThreeView extends Component {
           uz: nuz,
           tx: 0,
           ty: 0,
-          tz: 0
+          tz: 0,
+          r: nr
         },
         500
       )
       .easing(TWEEN.Easing.Quadratic.Out) // Use an easing function to make the animation smooth.
-      .onUpdate(({ x, y, z, ux, uy, uz, tx, ty, tz }) => {
+      .onUpdate(({ x, y, z, ux, uy, uz, tx, ty, tz, r }) => {
         // Called after tween.js updates 'coords'.
         this.controls.target.set(tx, ty, tz);
         this.cameras[1].position.set(x, y, z);
         this.cameras[1].up.set(ux, uy, uz);
         this.cameras[1].lookAt(new THREE.Vector3(0, 0, 0));
         this.cameras[1].updateProjectionMatrix();
+        this.protractor.rotation.set(r, r, 0);
       })
       .start();
 
