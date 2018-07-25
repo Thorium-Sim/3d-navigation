@@ -1,9 +1,15 @@
 import React from "react";
 import { ChromePicker } from "react-color";
 
-const StarConfig = ({ star: { id, name, image, hsl, scale }, updateStar }) => (
+const StarConfig = ({
+  deselect,
+  star: { id, name, image, hsl, scale },
+  updateStar,
+  deleteStar
+}) => (
   <div className="star-config">
     <h3>Star Config</h3>
+    <button onClick={deselect}>Deselect</button>
     <label>
       Name
       <input
@@ -48,6 +54,7 @@ const StarConfig = ({ star: { id, name, image, hsl, scale }, updateStar }) => (
         </div>
       ))}
     </div>
+    <button onClick={() => deleteStar(id)}>Delete</button>
   </div>
 );
 

@@ -19,7 +19,9 @@
     "three-transform-controls": "^1.0.4",
     "three-transformcontrols": "^0.78.1"
   },
-  "devDependencies": {},
+  "devDependencies": {
+    "gh-pages": "^1.2.0"
+  },
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",

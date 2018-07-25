@@ -202,11 +202,14 @@ class ThreeView extends Component {
   select = id => {
     const star = this.scene.children.find(c => c.userData.id === id);
     if (!star) return;
-    const { x, y, z } = star.position;
-    this.transformControl.attach(star);
+    if (this.props.edit) {
+      this.transformControl.attach(star);
+    } else {
+      const { x, y, z } = star.position;
+      this.crosshair.position.set(x, y, z);
+      this.crosshair.visible = true;
+    }
     star.userData.selected = true;
-    this.crosshair.position.set(x, y, z);
-    this.crosshair.visible = true;
   };
   deselect = () => {
     this.transformControl.detach();

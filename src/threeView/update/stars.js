@@ -1,5 +1,5 @@
 // Update star properties
-import { starSprites, makeTextSprite } from "../../threeHelpers";
+import { makeStar, starSprites, makeTextSprite } from "../../threeHelpers";
 export default function updateStars(self, propStars, stars) {
   propStars.forEach(({ id, name, image, scale, position, hsl }) => {
     const star = stars.find(st => st.userData.id === id);
@@ -37,6 +37,12 @@ export default function updateStars(self, propStars, stars) {
       }
     } else {
       // make a new one
+      const newStar = makeStar({ id, name, image, scale, position, hsl });
+      self.scene.add(newStar);
     }
   });
+  // Check for any stars that need to be deleted
+  stars
+    .filter(s => !propStars.find(ps => ps.id === s.userData.id))
+    .forEach(s => self.scene.remove(s));
 }

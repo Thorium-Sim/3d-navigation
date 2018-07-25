@@ -44,98 +44,156 @@ class App extends Component {
       roll,
       quaternion,
       search,
-      currentView
+      currentView,
+      edit
     } = this.state;
     window.localStorage.setItem("3dStars", JSON.stringify(this.state.stars));
     return (
       <div className="App">
-        {selectedStar && (
-          <StarConfig
-            star={stars.find(s => s.id === selectedStar)}
-            updateStar={(id, props, value) =>
+        {selectedStar &&
+          edit && (
+            <StarConfig
+              star={stars.find(s => s.id === selectedStar)}
+              deselect={() => this.setState({ selectedStar: null })}
+              deleteStar={id =>
+                this.setState(state => ({
+                  stars: state.stars.filter(s => s.id !== id),
+                  selectedStar: null
+                }))
+              }
+              updateStar={(id, props, value) =>
+                this.setState(state => ({
+                  stars: state.stars.map(
+                    s => (s.id === id ? { ...s, [props]: value } : s)
+                  )
+                }))
+              }
+            />
+          )}
+        <div className="view-buttons edit">
+          {edit && (
+            <button
+              onClick={() => {
+                const id = uuid.v4();
+                const star = {
+                  id,
+                  name: randomFromList(starList),
+                  position: randomOnSphere(500),
+                  image: Math.floor(Math.random() * 4),
+                  scale: 30,
+                  hsl: [Math.random(), 1, 0.5]
+                };
+                this.setState(state => ({
+                  stars: state.stars.concat(star)
+                }));
+                setTimeout(() => {
+                  this.setState({ selectedStar: id });
+                }, 100);
+              }}
+            >
+              Add Star
+            </button>
+          )}
+          <button
+            className={`${edit ? "active" : ""}`}
+            onClick={() =>
               this.setState(state => ({
-                stars: state.stars.map(
-                  s => (s.id === id ? { ...s, [props]: value } : s)
+                edit: !state.edit,
+                selectedStar: null,
+                quaternion: new THREE.Quaternion().setFromEuler(
+                  new THREE.Euler(Math.PI / 2, Math.PI, 0)
                 )
               }))
             }
-          />
-        )}
-        <div>
-          <button
-            onMouseDown={() => {
-              this.setState({ roll: 0.01 });
-            }}
-            onMouseUp={() => {
-              this.setState({ roll: 0 });
-            }}
           >
-            -
-          </button>
-          <button
-            onMouseDown={() => {
-              this.setState({ roll: -0.01 });
-            }}
-            onMouseUp={() => {
-              this.setState({ roll: 0 });
-            }}
-          >
-            +
-          </button>
-          <button
-            onMouseDown={() => {
-              this.setState({ pitch: -0.01 });
-            }}
-            onMouseUp={() => {
-              this.setState({ pitch: 0 });
-            }}
-          >
-            -
-          </button>
-          <button
-            onMouseDown={() => {
-              this.setState({ pitch: 0.01 });
-            }}
-            onMouseUp={() => {
-              this.setState({ pitch: 0 });
-            }}
-          >
-            +
-          </button>
-          <button
-            onMouseDown={() => {
-              this.setState({ yaw: 0.01 });
-            }}
-            onMouseUp={() => {
-              this.setState({ yaw: 0 });
-            }}
-          >
-            -
-          </button>
-          <button
-            onMouseDown={() => {
-              this.setState({ yaw: -0.01 });
-            }}
-            onMouseUp={() => {
-              this.setState({ yaw: 0 });
-            }}
-          >
-            +
+            Edit
           </button>
         </div>
-        <div>
-          <button onClick={() => this.setState({ selectedStar: null })}>
-            Deselect
-          </button>
-          <button onClick={() => this.setState({ currentView: "side" })}>
+        {!edit && (
+          <div className="view-buttons top">
+            <button
+              onMouseDown={() => {
+                this.setState({ yaw: 0.01 });
+              }}
+              onMouseUp={() => {
+                this.setState({ yaw: 0 });
+              }}
+            >
+              Yaw -
+            </button>
+            <button
+              onMouseDown={() => {
+                this.setState({ yaw: -0.01 });
+              }}
+              onMouseUp={() => {
+                this.setState({ yaw: 0 });
+              }}
+            >
+              Yaw +
+            </button>
+            <button
+              onMouseDown={() => {
+                this.setState({ pitch: -0.01 });
+              }}
+              onMouseUp={() => {
+                this.setState({ pitch: 0 });
+              }}
+            >
+              Pitch -
+            </button>
+            <button
+              onMouseDown={() => {
+                this.setState({ pitch: 0.01 });
+              }}
+              onMouseUp={() => {
+                this.setState({ pitch: 0 });
+              }}
+            >
+              Pitch +
+            </button>
+            <button
+              onMouseDown={() => {
+                this.setState({ roll: 0.01 });
+              }}
+              onMouseUp={() => {
+                this.setState({ roll: 0 });
+              }}
+            >
+              Roll -
+            </button>
+            <button
+              onMouseDown={() => {
+                this.setState({ roll: -0.01 });
+              }}
+              onMouseUp={() => {
+                this.setState({ roll: 0 });
+              }}
+            >
+              Roll +
+            </button>
+          </div>
+        )}
+        <div className="view-buttons">
+          <button
+            className={`${currentView === "side" ? "active" : ""}`}
+            onClick={() => this.setState({ currentView: "side" })}
+          >
             Side
           </button>
-          <button onClick={() => this.setState({ currentView: "top" })}>
+          <button
+            className={`${currentView === "top" ? "active" : ""}`}
+            onClick={() => this.setState({ currentView: "top" })}
+          >
             Top
           </button>
-          <button onClick={() => this.setState({ currentView: "perspective" })}>
+          <button
+            className={`${currentView === "perspective" ? "active" : ""}`}
+            onClick={() => this.setState({ currentView: "perspective" })}
+          >
             Perspective
           </button>
+        </div>
+        <div className="search">
           <input
             type="text"
             value={search}
@@ -146,7 +204,6 @@ class App extends Component {
             placeholder="Search..."
           />
         </div>
-        {/* <Protractor />*/}
         <Measure
           bounds
           onResize={contentRect => {
@@ -159,7 +216,7 @@ class App extends Component {
               ref={measureRef}
               style={{
                 width: "100vw",
-                height: "calc(100vh - 38px)"
+                height: "100vh"
               }}
             >
               {dimensions && (
@@ -174,6 +231,7 @@ class App extends Component {
                   currentView={currentView}
                   selectedStar={selectedStar}
                   selectStar={id => this.setState({ selectedStar: id })}
+                  edit={edit}
                   updateStarPosition={(id, position) => {
                     this.setState(state => ({
                       stars: state.stars.map(
