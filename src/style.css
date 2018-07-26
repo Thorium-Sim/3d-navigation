@@ -65,6 +65,18 @@ body,
 .view-buttons.edit button {
   flex: none;
 }
+.view-buttons.protractor {
+  justify-content: flex-start;
+  bottom: auto;
+  left: auto;
+  top: 20px;
+  left: 20px;
+  right: auto;
+  width: 50%;
+}
+.view-buttons.protractor button {
+  flex: none;
+}
 .view-buttons button {
   flex: 1;
   font-size: 24px;

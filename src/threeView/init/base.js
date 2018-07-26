@@ -7,6 +7,6 @@ export default function makeBase(self) {
   self.intersects = [];
   self.raycaster = new THREE.Raycaster();
   self.mouse = new THREE.Vector2();
-  self.renderer = new THREE.WebGLRenderer({ alpha: true });
+  self.renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
   self.renderer.setSize(width, height);
 }

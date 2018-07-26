@@ -3,7 +3,7 @@ import * as THREE from "three";
 //import { degtorad } from "./protractor";
 import TWEEN from "@tweenjs/tween.js";
 import { makeStar, makeLights, makeSkybox, makeShip } from "../threeHelpers";
-import { makeCameras, makeControls, makeBase, makeProtractor } from "./init";
+import { makeCameras, makeControls, makeBase, Protractor } from "./init";
 import { rotate, scale, labels } from "./animate";
 import { starsUpdate, searchUpdate } from "./update";
 import { Interaction } from "three.interaction";
@@ -38,7 +38,7 @@ class ThreeView extends Component {
     this.skybox = makeSkybox(this.SKY_SIZE);
     this.scene.add(this.skybox);
     makeShip().then(ship => {
-      this.protractor = makeProtractor(this, ship);
+      this.protractor = new Protractor(this, ship);
       this.scene.add(this.protractor);
       this.rig = new THREE.Object3D();
       this.ship = ship;
@@ -62,7 +62,14 @@ class ThreeView extends Component {
     });
   }
   componentDidUpdate(prevProps) {
-    const { quaternion, selectedStar, currentView } = this.props;
+    const {
+      quaternion,
+      selectedStar,
+      currentView,
+      yawAngle,
+      pitchAngle,
+      protractorShown
+    } = this.props;
     const { stars: propStars } = this.props;
     if (this.rig) {
       this.rig.setRotationFromQuaternion(quaternion);
@@ -82,6 +89,12 @@ class ThreeView extends Component {
     }
     starsUpdate(this, propStars, stars);
     searchUpdate(this, stars);
+    if (currentView === "side") {
+      this.protractor.updateAngle(pitchAngle);
+    } else {
+      this.protractor.updateAngle(yawAngle);
+    }
+    this.protractor.visible = protractorShown;
   }
   componentDidMount() {
     this.createScene();
@@ -138,6 +151,7 @@ class ThreeView extends Component {
   setView = which => {
     this.view = which;
     if (which === "perspective") {
+      this.protractor.visible = false;
       this.cameras[0].position.z = 300;
       this.cameras[0].position.y = 200;
       this.cameras[0].position.x = 300;
@@ -158,6 +172,7 @@ class ThreeView extends Component {
       return;
     }
     this.currentCamera = 1;
+    this.protractor.visible = this.props.protractorShown;
 
     const { x, y, z } = this.cameras[1].position.clone();
     const { x: ux, y: uy, z: uz } = this.cameras[1].up.clone();
@@ -204,7 +219,8 @@ class ThreeView extends Component {
         this.cameras[1].up.set(ux, uy, uz);
         this.cameras[1].lookAt(new THREE.Vector3(0, 0, 0));
         this.cameras[1].updateProjectionMatrix();
-        this.protractor.rotation.set(r, r, 0);
+        this.protractor.rotation.set(r, r, -r);
+        this.protractor.children[1].rotation.set(0, 0, r);
       })
       .start();
 

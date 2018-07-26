@@ -3,7 +3,6 @@ import ReactDOM from "react-dom";
 import * as THREE from "three";
 import Three from "./threeView";
 import Measure from "react-measure";
-import Protractor from "./protractor";
 import StarConfig from "./starConfig";
 import starList from "./systemHelpers";
 import uuid from "uuid";
@@ -19,7 +18,11 @@ class App extends Component {
     yaw: 0,
     pitch: 0,
     roll: 0,
+    // For protractor
+    yawAngle: 0,
+    pitchAngle: 0,
     currentView: "top",
+    protractorShown: false,
     dimensions: null,
     stars: window.localStorage.getItem("3dStars")
       ? JSON.parse(window.localStorage.getItem("3dStars"))
@@ -42,10 +45,13 @@ class App extends Component {
       yaw,
       pitch,
       roll,
+      yawAngle,
+      pitchAngle,
       quaternion,
       search,
       currentView,
-      edit
+      edit,
+      protractorShown
     } = this.state;
     window.localStorage.setItem("3dStars", JSON.stringify(this.state.stars));
     return (
@@ -107,6 +113,18 @@ class App extends Component {
             }
           >
             Edit
+          </button>
+        </div>
+        <div className="view-buttons protractor">
+          <button
+            className={`${protractorShown ? "active" : ""}`}
+            onClick={() =>
+              this.setState(state => ({
+                protractorShown: !state.protractorShown
+              }))
+            }
+          >
+            Protractor
           </button>
         </div>
         {!edit && (
@@ -225,6 +243,14 @@ class App extends Component {
                   yaw={yaw}
                   pitch={pitch}
                   roll={roll}
+                  yawAngle={yawAngle}
+                  pitchAngle={pitchAngle}
+                  updateProtractorAngle={angle =>
+                    this.setState({
+                      [`${currentView === "top" ? "yaw" : "pitch"}Angle`]: angle
+                    })
+                  }
+                  protractorShown={protractorShown}
                   quaternion={quaternion}
                   search={search}
                   stars={stars}
