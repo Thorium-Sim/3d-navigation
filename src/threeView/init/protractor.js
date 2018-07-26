@@ -19,22 +19,12 @@ function polarToCartesian(centerX, centerY, radius, angleInDegrees) {
     y: centerY + radius * Math.sin(angleInRadians)
   };
 }
-function cartesianToPolar(x, y) {
-  return Math.atan2(y, x) / (Math.PI / 180.0) + 180;
-}
 
-function degtorad(deg) {
-  return deg * (Math.PI / 180);
-}
 function radtodeg(rad) {
   return rad / (Math.PI / 180);
 }
 
 const angleRadians = (p1, p2) => Math.atan2(p2.y - p1.y, p2.x - p1.x);
-
-// angle in degrees
-const angleDeg = (p1, p2) =>
-  (Math.atan2(p2.y - p1.y, p2.x - p1.x) * 180) / Math.PI;
 
 export default class Protractor extends THREE.Object3D {
   constructor(self, ship) {

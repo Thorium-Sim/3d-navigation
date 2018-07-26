@@ -47,6 +47,7 @@ const StarConfig = ({
       ].map((src, i) => (
         <div key={src}>
           <img
+            alt="Star"
             className={`${i === image ? "active" : ""}`}
             src={src}
             onClick={() => updateStar(id, "image", i)}
