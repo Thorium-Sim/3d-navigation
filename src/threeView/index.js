@@ -38,8 +38,6 @@ class ThreeView extends Component {
     this.skybox = makeSkybox(this.SKY_SIZE);
     this.scene.add(this.skybox);
     makeShip().then(ship => {
-      this.protractor = new Protractor(this, ship);
-      this.scene.add(this.protractor);
       this.rig = new THREE.Object3D();
       this.ship = ship;
       this.rig.add(this.cameras[1]);
@@ -51,6 +49,9 @@ class ThreeView extends Component {
       line.position.z = 3;
       this.ship.add(line);
       this.rig.add(this.ship);
+      this.protractor = new Protractor(this, ship);
+      this.rig.add(this.protractor);
+
       this.rig.setRotationFromQuaternion(this.props.quaternion);
       this.scene.add(this.rig);
     });
@@ -177,7 +178,17 @@ class ThreeView extends Component {
     const { x, y, z } = this.cameras[1].position.clone();
     const { x: ux, y: uy, z: uz } = this.cameras[1].up.clone();
     const { x: tx, y: ty, z: tz } = this.controls.target.clone();
-    let [nx, ny, nz, nux, nuy, nuz, nr] = [0, 0, 0, 0, 0, 0, 0];
+    let [nx, ny, nz, nux, nuy, nuz, nrx, nry, nrz] = [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      (Math.PI / 2) * 3,
+      0,
+      Math.PI
+    ];
     this.controls.enableRotate = false;
     this.controls.enablePan = true;
     this.controls.mouseButtons = {
@@ -188,14 +199,32 @@ class ThreeView extends Component {
     if (which === "side") {
       nx = -1000;
       nuy = 1;
-      nr = Math.PI / 2;
+      nrx = (Math.PI / 2) * 2;
+      nry = -Math.PI / 2;
+      nrz = Math.PI - Math.PI / 2;
     }
     if (which === "top") {
       ny = 1000;
       nuz = 1;
     }
-    const r = this.protractor.rotation._x;
-    this.tween = new TWEEN.Tween({ x, y, z, ux, uy, uz, tx, ty, tz, r })
+    const rx = this.protractor.rotation._x;
+    const ry = this.protractor.rotation._y;
+    const rz = this.protractor.rotation._z;
+
+    this.tween = new TWEEN.Tween({
+      x,
+      y,
+      z,
+      ux,
+      uy,
+      uz,
+      tx,
+      ty,
+      tz,
+      rx,
+      ry,
+      rz
+    })
       .to(
         {
           x: nx,
@@ -207,20 +236,22 @@ class ThreeView extends Component {
           tx: 0,
           ty: 0,
           tz: 0,
-          r: nr
+          rx: nrx,
+          ry: nry,
+          rz: nrz
         },
         500
       )
       .easing(TWEEN.Easing.Quadratic.Out) // Use an easing function to make the animation smooth.
-      .onUpdate(({ x, y, z, ux, uy, uz, tx, ty, tz, r }) => {
+      .onUpdate(({ x, y, z, ux, uy, uz, tx, ty, tz, rx, ry, rz }) => {
         // Called after tween.js updates 'coords'.
         this.controls.target.set(tx, ty, tz);
         this.cameras[1].position.set(x, y, z);
         this.cameras[1].up.set(ux, uy, uz);
         this.cameras[1].lookAt(new THREE.Vector3(0, 0, 0));
         this.cameras[1].updateProjectionMatrix();
-        this.protractor.rotation.set(r, r, -r);
-        this.protractor.children[1].rotation.set(0, 0, r);
+        this.protractor.rotation.set(rx, ry, rz);
+        this.protractor.children[1].rotation.set(0, 0, ry * -1);
       })
       .start();
 
