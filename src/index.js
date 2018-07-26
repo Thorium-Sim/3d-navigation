@@ -3,13 +3,15 @@ import ReactDOM from "react-dom";
 import * as THREE from "three";
 import Three from "./threeView";
 import Measure from "react-measure";
-import StarConfig from "./starConfig";
+import StarConfig from "./ui/starConfig";
+import RotateButtons from "./ui/rotateButtons";
+import ViewButtons from "./ui/viewButtons";
+
 import starList from "./systemHelpers";
 import uuid from "uuid";
 
 import "./style.css";
 import { randomOnSphere, randomFromList } from "./threeHelpers";
-
 class App extends Component {
   state = {
     quaternion: new THREE.Quaternion().setFromEuler(
@@ -128,89 +130,12 @@ class App extends Component {
           </button>
         </div>
         {!edit && (
-          <div className="view-buttons top">
-            <button
-              onMouseDown={() => {
-                this.setState({ yaw: 0.01 });
-              }}
-              onMouseUp={() => {
-                this.setState({ yaw: 0 });
-              }}
-            >
-              Yaw -
-            </button>
-            <button
-              onMouseDown={() => {
-                this.setState({ yaw: -0.01 });
-              }}
-              onMouseUp={() => {
-                this.setState({ yaw: 0 });
-              }}
-            >
-              Yaw +
-            </button>
-            <button
-              onMouseDown={() => {
-                this.setState({ pitch: -0.01 });
-              }}
-              onMouseUp={() => {
-                this.setState({ pitch: 0 });
-              }}
-            >
-              Pitch -
-            </button>
-            <button
-              onMouseDown={() => {
-                this.setState({ pitch: 0.01 });
-              }}
-              onMouseUp={() => {
-                this.setState({ pitch: 0 });
-              }}
-            >
-              Pitch +
-            </button>
-            <button
-              onMouseDown={() => {
-                this.setState({ roll: 0.01 });
-              }}
-              onMouseUp={() => {
-                this.setState({ roll: 0 });
-              }}
-            >
-              Roll -
-            </button>
-            <button
-              onMouseDown={() => {
-                this.setState({ roll: -0.01 });
-              }}
-              onMouseUp={() => {
-                this.setState({ roll: 0 });
-              }}
-            >
-              Roll +
-            </button>
-          </div>
+          <RotateButtons updateRotation={params => this.setState(params)} />
         )}
-        <div className="view-buttons">
-          <button
-            className={`${currentView === "side" ? "active" : ""}`}
-            onClick={() => this.setState({ currentView: "side" })}
-          >
-            Side
-          </button>
-          <button
-            className={`${currentView === "top" ? "active" : ""}`}
-            onClick={() => this.setState({ currentView: "top" })}
-          >
-            Top
-          </button>
-          <button
-            className={`${currentView === "perspective" ? "active" : ""}`}
-            onClick={() => this.setState({ currentView: "perspective" })}
-          >
-            Perspective
-          </button>
-        </div>
+        <ViewButtons
+          setView={view => this.setState({ currentView: view })}
+          currentView={currentView}
+        />
         <div className="search">
           <input
             type="text"
@@ -257,6 +182,7 @@ class App extends Component {
                   currentView={currentView}
                   selectedStar={selectedStar}
                   selectStar={id => this.setState({ selectedStar: id })}
+                  updateRotation={params => this.setState(params)}
                   edit={edit}
                   updateStarPosition={(id, position) => {
                     this.setState(state => ({

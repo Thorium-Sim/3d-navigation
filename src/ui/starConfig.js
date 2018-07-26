@@ -40,10 +40,10 @@ const StarConfig = ({
     <label>Image</label>
     <div className="image-holder">
       {[
-        require("./img/star1.png"),
-        require("./img/star2.png"),
-        require("./img/star3.png"),
-        require("./img/star4.png")
+        require("../img/star1.png"),
+        require("../img/star2.png"),
+        require("../img/star3.png"),
+        require("../img/star4.png")
       ].map((src, i) => (
         <div key={src}>
           <img
