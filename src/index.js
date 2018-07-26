@@ -23,6 +23,7 @@ class App extends Component {
     // For protractor
     yawAngle: 0,
     pitchAngle: 0,
+    velocity: 0,
     currentView: "top",
     protractorShown: false,
     dimensions: null,
@@ -53,7 +54,8 @@ class App extends Component {
       search,
       currentView,
       edit,
-      protractorShown
+      protractorShown,
+      velocity
     } = this.state;
     window.localStorage.setItem("3dStars", JSON.stringify(this.state.stars));
     return (
@@ -78,6 +80,16 @@ class App extends Component {
               }
             />
           )}
+        <input
+          type="range"
+          min={-0.5}
+          max={0.5}
+          step={0.01}
+          value={velocity}
+          onChange={e =>
+            this.setState({ velocity: parseFloat(e.target.value) })
+          }
+        />
         <div className="view-buttons edit">
           {edit && (
             <button
@@ -102,6 +114,7 @@ class App extends Component {
               Add Star
             </button>
           )}
+
           <button
             className={`${edit ? "active" : ""}`}
             onClick={() =>
@@ -170,6 +183,7 @@ class App extends Component {
                   roll={roll}
                   yawAngle={yawAngle}
                   pitchAngle={pitchAngle}
+                  velocity={velocity}
                   updateProtractorAngle={angle =>
                     this.setState({
                       [`${currentView === "top" ? "yaw" : "pitch"}Angle`]: angle

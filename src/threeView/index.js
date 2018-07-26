@@ -289,7 +289,7 @@ class ThreeView extends Component {
     rotate(this);
     scale(this);
     labels(this);
-
+    this.rig && this.rig.translateZ(this.props.velocity);
     this.controls && this.controls.update();
     this.renderer.render(this.scene, this.cameras[this.currentCamera]);
     this.frame = requestAnimationFrame(this.animate);
