@@ -12,6 +12,29 @@ import uuid from "uuid";
 
 import "./style.css";
 import { randomOnSphere, randomFromList } from "./threeHelpers";
+
+function makeStages() {
+  return Array(50)
+    .fill(0)
+    .map(() => ({
+      id: uuid.v4(),
+      name: randomFromList(starList),
+      position: randomOnSphere(500),
+      image: Math.floor(Math.random() * 4),
+      scale: 30,
+      hsl: [Math.random(), 1, 0.5],
+      stage: Array(10)
+        .fill(0)
+        .map(() => ({
+          id: uuid.v4(),
+          name: randomFromList(starList),
+          position: randomOnSphere(500),
+          image: Math.floor(Math.random() * 4),
+          scale: 30,
+          hsl: [Math.random(), 1, 0.5]
+        }))
+    }));
+}
 class App extends Component {
   state = {
     quaternion: new THREE.Quaternion().setFromEuler(
@@ -20,6 +43,7 @@ class App extends Component {
     yaw: 0,
     pitch: 0,
     roll: 0,
+    position: new THREE.Vector3(0, 0, 0),
     // For protractor
     yawAngle: 0,
     pitchAngle: 0,
@@ -27,37 +51,48 @@ class App extends Component {
     currentView: "top",
     protractorShown: false,
     dimensions: null,
-    stars: window.localStorage.getItem("3dStars")
-      ? JSON.parse(window.localStorage.getItem("3dStars"))
-      : Array(50)
-          .fill(0)
-          .map(() => ({
-            id: uuid.v4(),
-            name: randomFromList(starList),
-            position: randomOnSphere(500),
-            image: Math.floor(Math.random() * 4),
-            scale: 30,
-            hsl: [Math.random(), 1, 0.5]
-          }))
+    stage: window.localStorage.getItem("3d-stages")
+      ? JSON.parse(window.localStorage.getItem("3d-stages"))
+      : makeStages()
+  };
+  enterStage = (id, shipInside) => {
+    // If the simulator is moving inside of a smaller stage, set it's position to
+    // a random location on the radius of the stage.
+    // If it's just the view changing, don't change the simulators position and remove
+    // the simulator from the view.
+    this.setState(state => ({ currentStage: id }));
+  };
+  leaveStage = () => {};
+  updatePosition = () => {
+    const { velocity, quaternion, position } = this.state;
+    const v = new THREE.Vector3();
+    const axis = new THREE.Vector3(0, 0, 1);
+    v.copy(axis).applyQuaternion(quaternion);
+    position.add(v.multiplyScalar(velocity));
+    this.setState({ position });
   };
   render() {
     const {
       dimensions,
-      stars,
+      stage,
       selectedStar,
       yaw,
       pitch,
       roll,
+      position,
       yawAngle,
       pitchAngle,
       quaternion,
       search,
       currentView,
       edit,
+      velocity,
       protractorShown,
-      velocity
+      currentStage
     } = this.state;
-    window.localStorage.setItem("3dStars", JSON.stringify(this.state.stars));
+    window.localStorage.setItem("3d-stages", JSON.stringify(stage));
+    const innerStage = stage.find(s => s.id === currentStage);
+    const stars = innerStage ? innerStage.stage : stage;
     return (
       <div className="App">
         {selectedStar &&
@@ -183,12 +218,13 @@ class App extends Component {
                   roll={roll}
                   yawAngle={yawAngle}
                   pitchAngle={pitchAngle}
-                  velocity={velocity}
                   updateProtractorAngle={angle =>
                     this.setState({
                       [`${currentView === "top" ? "yaw" : "pitch"}Angle`]: angle
                     })
                   }
+                  updatePosition={this.updatePosition}
+                  position={position}
                   protractorShown={protractorShown}
                   quaternion={quaternion}
                   search={search}
@@ -196,12 +232,13 @@ class App extends Component {
                   currentView={currentView}
                   selectedStar={selectedStar}
                   selectStar={id => this.setState({ selectedStar: id })}
+                  enterStage={this.enterStage}
                   updateRotation={params => this.setState(params)}
                   edit={edit}
-                  updateStarPosition={(id, position) => {
+                  updateStarPosition={(id, pos) => {
                     this.setState(state => ({
                       stars: state.stars.map(
-                        s => (s.id === id ? { ...s, position } : s)
+                        s => (s.id === id ? { ...s, position: pos } : s)
                       )
                     }));
                   }}

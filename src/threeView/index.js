@@ -41,6 +41,7 @@ class ThreeView extends Component {
       this.rig = new THREE.Object3D();
       this.ship = ship;
       this.rig.add(this.cameras[1]);
+      this.rig.add(this.cameras[0]);
       const lineMaterial = new THREE.MeshBasicMaterial({
         color: 0xff0000
       });
@@ -69,11 +70,14 @@ class ThreeView extends Component {
       currentView,
       yawAngle,
       pitchAngle,
-      protractorShown
+      protractorShown,
+      position
     } = this.props;
     const { stars: propStars } = this.props;
     if (this.rig) {
       this.rig.setRotationFromQuaternion(quaternion);
+
+      this.rig.position.set(...Object.values(position));
     }
     const stars = this.scene.children.filter(c => c.userData.isStar);
 
@@ -90,12 +94,14 @@ class ThreeView extends Component {
     }
     starsUpdate(this, propStars, stars);
     searchUpdate(this, stars);
-    if (currentView === "side") {
-      this.protractor.updateAngle(pitchAngle);
-    } else {
-      this.protractor.updateAngle(yawAngle);
+    if (this.protractor) {
+      if (currentView === "side") {
+        this.protractor.updateAngle(pitchAngle);
+      } else {
+        this.protractor.updateAngle(yawAngle);
+      }
+      this.protractor.visible = protractorShown;
     }
-    this.protractor.visible = protractorShown;
   }
   componentDidMount() {
     this.createScene();
@@ -146,7 +152,14 @@ class ThreeView extends Component {
   onMouseDown = () => {
     if (this.intersects.length > 0) {
       this.deselect();
+      if (this.clicked) {
+        this.clicked = false;
+        this.props.enterStage(this.intersects[0].userData.id);
+        return;
+      }
       this.props.selectStar(this.intersects[0].userData.id);
+      this.clicked = true;
+      setTimeout(() => (this.clicked = false), 500);
     }
   };
   setView = which => {
@@ -289,7 +302,7 @@ class ThreeView extends Component {
     rotate(this);
     scale(this);
     labels(this);
-    this.rig && this.rig.translateZ(this.props.velocity);
+    this.props.updatePosition();
     this.controls && this.controls.update();
     this.renderer.render(this.scene, this.cameras[this.currentCamera]);
     this.frame = requestAnimationFrame(this.animate);
