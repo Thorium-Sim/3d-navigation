@@ -56,9 +56,8 @@ class ThreeView extends Component {
       this.rig.setRotationFromQuaternion(this.props.quaternion);
       this.scene.add(this.rig);
     });
-
     // Create initial stars
-    this.props.stars.forEach(s => {
+    this.props.stage.forEach(s => {
       const star = makeStar(s);
       star && this.scene.add(star);
     });
@@ -71,16 +70,23 @@ class ThreeView extends Component {
       yawAngle,
       pitchAngle,
       protractorShown,
-      position
+      position,
+      shipStage,
+      currentStage
     } = this.props;
-    const { stars: propStars } = this.props;
-    if (this.rig) {
-      this.rig.setRotationFromQuaternion(quaternion);
+    const { stage: propStars } = this.props;
 
-      this.rig.position.set(...Object.values(position));
-    }
     const stars = this.scene.children.filter(c => c.userData.isStar);
-
+    if (this.rig) {
+      if (shipStage === currentStage) {
+        this.ship.visible = true;
+        this.rig.setRotationFromQuaternion(quaternion);
+        this.rig.position.set(...Object.values(position));
+      } else {
+        this.ship.visible = false;
+        this.rig.position.set(0, 0, 0);
+      }
+    }
     if (prevProps.selectedStar !== selectedStar) {
       if (!selectedStar) {
         this.deselect();
@@ -100,7 +106,9 @@ class ThreeView extends Component {
       } else {
         this.protractor.updateAngle(yawAngle);
       }
-      this.protractor.visible = protractorShown;
+      if (currentView !== "perspective") {
+        this.protractor.visible = protractorShown;
+      }
     }
   }
   componentDidMount() {
@@ -152,20 +160,19 @@ class ThreeView extends Component {
   onMouseDown = () => {
     if (this.intersects.length > 0) {
       this.deselect();
-      if (this.clicked) {
-        this.clicked = false;
+      if (this.clickedObject === this.intersects[0].userData.id) {
+        this.clickedObject = false;
         this.props.enterStage(this.intersects[0].userData.id);
         return;
       }
       this.props.selectStar(this.intersects[0].userData.id);
-      this.clicked = true;
-      setTimeout(() => (this.clicked = false), 500);
+      this.clickedObject = this.intersects[0].userData.id;
+      setTimeout(() => (this.clickedObject = false), 500);
     }
   };
   setView = which => {
     this.view = which;
     if (which === "perspective") {
-      this.protractor.visible = false;
       this.cameras[0].position.z = 300;
       this.cameras[0].position.y = 200;
       this.cameras[0].position.x = 300;
@@ -183,6 +190,7 @@ class ThreeView extends Component {
       // this.lines.visible = false;
       this.controls.object = this.cameras[this.currentCamera];
       this.controls.update();
+      this.protractor.visible = false;
       return;
     }
     this.currentCamera = 1;

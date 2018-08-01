@@ -166,5 +166,6 @@ export default class Protractor extends THREE.Object3D {
         10
       );
     };
+    this.rotation.set((Math.PI / 2) * 3, 0, Math.PI);
   }
 }

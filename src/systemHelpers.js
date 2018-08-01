@@ -141,6 +141,7 @@ export default [
   "Ancient Hope",
   "Ankaa",
   "Answer",
+  "Antablian",
   "Antares",
   "Antevorta",
   "Ap'arak",
