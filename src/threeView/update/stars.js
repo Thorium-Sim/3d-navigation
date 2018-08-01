@@ -1,44 +1,69 @@
 // Update star properties
-import { makeStar, starSprites, makeTextSprite } from "../../threeHelpers";
+import * as THREE from "three";
+import {
+  makeStar,
+  makePlanet,
+  starSprites,
+  makeTextSprite
+} from "../../threeHelpers";
+import planetImages from "../../planetImages";
+
+const planetMaps = planetImages.map(s => new THREE.TextureLoader().load(s));
+
 export default function updateStars(self, propStars, stars) {
-  propStars.forEach(({ id, name, image, scale, position, hsl }) => {
-    const star = stars.find(st => st.userData.id === id);
-    if (star) {
-      const sprite = star.children.find(c => !c.userData.isLabel);
-      star.position.set(
+  propStars.forEach(({ id, name, image, scale, position, hsl, type }) => {
+    const object = stars.find(st => st.userData.id === id);
+    if (object) {
+      const sprite = object.children.find(c => !c.userData.isLabel);
+      object.position.set(
         ...(typeof position.length === "number"
           ? position
           : Object.values(position))
       );
       if (scale) {
         sprite.scale.set(
-          ...(typeof scale === "number" ? [scale, scale, 1] : scale)
+          ...(typeof scale === "number" ? [scale, scale, scale] : scale)
         );
       }
-      if (hsl) {
-        sprite.material.color.setHSL(...hsl);
-      }
-      if (image || image === 0) {
-        if (image !== star.userData.image && starSprites[image]) {
-          sprite.material.map = starSprites[image];
+      if (object.type === "star") {
+        if (hsl) {
+          sprite.material.color.setHSL(...hsl);
+        }
+        if (image || image === 0) {
+          if (image !== object.userData.image && starSprites[image]) {
+            sprite.material.map = starSprites[image];
+          }
+        }
+      } else {
+        if (image || image === 0) {
+          if (image !== object.userData.image && planetMaps[image]) {
+            sprite.material.map = planetMaps[image];
+          }
         }
       }
-      if (star.name !== name) {
+
+      if (object.name !== name) {
         // Remove the label and make a new one
-        const label = star.children.find(c => c.userData.isLabel);
+        const label = object.children.find(c => c.userData.isLabel);
         const oldVisible = label ? label.visible : false;
-        star.remove(label);
+        object.remove(label);
         makeTextSprite(name).then(newLabel => {
           newLabel.position.set(0, -20, 10);
           newLabel.visible = oldVisible;
-          newLabel.userData.parent = star;
-          star.add(newLabel);
+          newLabel.userData.parent = object;
+          object.add(newLabel);
         });
       }
     } else {
       // make a new one
-      const newStar = makeStar({ id, name, image, scale, position, hsl });
-      self.scene.add(newStar);
+      if (type === "star") {
+        const newStar = makeStar({ id, name, image, scale, position, hsl });
+        newStar && self.scene.add(newStar);
+      }
+      if (type === "planet") {
+        const planet = makePlanet({ id, name, image, scale, position, hsl });
+        planet && self.scene.add(planet);
+      }
     }
   });
   // Check for any stars that need to be deleted

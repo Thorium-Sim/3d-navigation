@@ -6,3 +6,4 @@ export { default as makeTextSprite } from "./makeTextSprite";
 export { default as randomFromList } from "./randomFromList";
 export { default as randomOnSphere } from "./randomOnSphere";
 export { default as starSprites } from "./starSprites";
+export { default as makePlanet } from "./makePlanet";

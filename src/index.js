@@ -8,6 +8,7 @@ import RotateButtons from "./ui/rotateButtons";
 import ViewButtons from "./ui/viewButtons";
 
 import starList from "./systemHelpers";
+import planetList from "./planetNames";
 import uuid from "uuid";
 
 import "./style.css";
@@ -27,30 +28,55 @@ function randomOnPlane(radius) {
   const y = Math.sin(angle) * radius;
   return [x, y, 0];
 }
-function makeObject(objects, parentId, innerStage) {
+function makeObject(objects, params = {}, innerStage) {
   const id = uuid.v4();
-  let velocityAdjust = 1;
-  if (innerStage) {
-    velocityAdjust = 4;
-    for (let i = 0; i < 10; i++) {
-      objects.push(makeObject(objects, id, false));
-    }
-  }
-  return {
+  const star = {
     id,
-    parentId,
-    name: randomFromList(starList),
-    position: randomOnSphere(500),
-    image: Math.floor(Math.random() * 4),
-    velocityAdjust,
-    scale: 30,
-    hsl: [Math.random(), 1, 0.5]
+    parentId: params.parentId || null,
+    name: params.name || randomFromList(starList),
+    position: params.position || randomOnSphere(500),
+    image: params.image || Math.floor(Math.random() * 4),
+    velocityAdjust: params.velocityAdjust || 1,
+    scale: params.scale || 30,
+    type: params.type || "star",
+    hsl: params.hsl || [Math.random(), 1, 0.5]
   };
+  if (innerStage) {
+    for (let i = 0; i < 5; i++) {
+      objects.push(
+        makeObject(
+          objects,
+          {
+            parentId: id,
+            velocityAdjust: 4,
+            type: "planet",
+            scale: Math.random() * 20 + 10,
+            name: randomFromList(planetList)
+          },
+          false
+        )
+      );
+    }
+    objects.push(
+      makeObject(
+        objects,
+        {
+          ...star,
+          id: uuid.v4(),
+          parentId: id,
+          position: { x: 0, y: 0, z: 0 },
+          scale: 100
+        },
+        false
+      )
+    );
+  }
+  return star;
 }
 function makeStages() {
   const objects = [];
   for (let i = 0; i < 50; i++) {
-    objects.push(makeObject(objects, null, true));
+    objects.push(makeObject(objects, {}, true));
   }
   return objects;
 }

@@ -2,7 +2,13 @@ import React, { Component } from "react";
 import * as THREE from "three";
 //import { degtorad } from "./protractor";
 import TWEEN from "@tweenjs/tween.js";
-import { makeStar, makeLights, makeSkybox, makeShip } from "../threeHelpers";
+import {
+  makeStar,
+  makePlanet,
+  makeLights,
+  makeSkybox,
+  makeShip
+} from "../threeHelpers";
 import { makeCameras, makeControls, makeBase, Protractor } from "./init";
 import { rotate, scale, labels } from "./animate";
 import { starsUpdate, searchUpdate } from "./update";
@@ -58,8 +64,14 @@ class ThreeView extends Component {
     });
     // Create initial stars
     this.props.stage.forEach(s => {
-      const star = makeStar(s);
-      star && this.scene.add(star);
+      if (s.type === "star") {
+        const star = makeStar(s);
+        star && this.scene.add(star);
+      }
+      if (s.type === "planet") {
+        const planet = makePlanet(s);
+        planet && this.scene.add(planet);
+      }
     });
   }
   componentDidUpdate(prevProps) {

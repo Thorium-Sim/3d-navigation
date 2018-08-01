@@ -27,6 +27,9 @@ export default function makeStar(params) {
   star.userData.isStar = true;
   sprite.userData.parent = star;
   star.add(sprite);
+  const light = new THREE.PointLight(0xffffff, 1, 10000, 2);
+  light.position.set(...(position.length ? position : Object.values(position)));
+  star.add(light);
   makeTextSprite(name).then(label => {
     label.position.set(0, -20, 10);
     label.visible = false;
