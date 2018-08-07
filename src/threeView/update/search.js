@@ -12,7 +12,7 @@ const similarityScore = (strA, strB) => {
   )(aWords);
 };
 
-export default function searchUpdate(self, stars) {
+export default function searchUpdate(self, stars, sectors) {
   // Search for stars
   const { search } = self.props;
   const visibleStars = stars.filter(c => {
@@ -28,6 +28,11 @@ export default function searchUpdate(self, stars) {
       label.visible = false;
     }
   });
+  sectors.children.forEach(s => {
+    s.visible = !search;
+    s.material.opacity = 0.05;
+    s.material.color.setHex(0xffffff);
+  });
   if (search) {
     visibleStars.forEach((s, i, arr) => {
       s.visible = true;
@@ -38,6 +43,15 @@ export default function searchUpdate(self, stars) {
         } else {
           label.visible = false;
         }
+      }
+    });
+    sectors.children.forEach(s => {
+      if (s.name.toLowerCase().indexOf(search.toLowerCase()) !== -1) {
+        s.visible = true;
+        s.material.opacity = 0.5;
+        s.material.color.setHex(0xff0000);
+      } else {
+        s.visible = false;
       }
     });
   }

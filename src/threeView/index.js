@@ -9,8 +9,14 @@ import {
   makeSkybox,
   makeShip
 } from "../threeHelpers";
-import { makeCameras, makeControls, makeBase, Protractor } from "./init";
-import { rotate, scale, labels } from "./animate";
+import {
+  makeCameras,
+  makeControls,
+  makeBase,
+  makeSectors,
+  Protractor
+} from "./init";
+import { scale, labels } from "./animate";
 import { starsUpdate, searchUpdate } from "./update";
 import { Interaction } from "three.interaction";
 
@@ -59,6 +65,27 @@ class ThreeView extends Component {
       this.protractor = new Protractor(this, ship);
       this.rig.add(this.protractor);
 
+      const sphere = new THREE.SphereGeometry(1, 6, 6);
+      const sensMaterial = new THREE.MeshBasicMaterial({
+        color: 0x0088ff,
+        wireframe: true,
+        transparent: true,
+        opacity: 0.3
+      });
+      const wepMaterial = new THREE.MeshBasicMaterial({
+        color: 0xff0000,
+        wireframe: true,
+        transparent: true,
+        opacity: 0.3
+      });
+
+      this.sensors = new THREE.Mesh(sphere, sensMaterial);
+      this.weapons = new THREE.Mesh(sphere, wepMaterial);
+      this.sensors.visible = false;
+      this.weapons.visible = false;
+      this.weapons.scale.set(1 / 3, 1 / 3, 1 / 3);
+      this.rig.add(this.sensors);
+      this.rig.add(this.weapons);
       this.rig.setRotationFromQuaternion(this.props.quaternion);
       this.scene.add(this.rig);
     });
@@ -73,6 +100,8 @@ class ThreeView extends Component {
         planet && this.scene.add(planet);
       }
     });
+    this.sectors = makeSectors();
+    // this.scene.add(this.sectors);
   }
   componentDidUpdate(prevProps) {
     const {
@@ -84,7 +113,9 @@ class ThreeView extends Component {
       protractorShown,
       position,
       shipStage,
-      currentStage
+      currentStage,
+      sensorsRangeShown,
+      weaponsRangeShown
     } = this.props;
     const { stage: propStars } = this.props;
 
@@ -93,7 +124,7 @@ class ThreeView extends Component {
       if (shipStage === currentStage) {
         this.ship.visible = true;
         this.rig.setRotationFromQuaternion(quaternion);
-        this.rig.position.set(...Object.values(position));
+        this.rig.position.set(position.x, position.y, position.z);
       } else {
         this.ship.visible = false;
         this.rig.position.set(0, 0, 0);
@@ -106,12 +137,24 @@ class ThreeView extends Component {
         this.select(selectedStar);
       }
     }
+    // Update the ranges
+    this.sensors.visible = !!sensorsRangeShown;
+    this.weapons.visible = !!weaponsRangeShown;
+    const stage = propStars.find(s => s.parentId === shipStage);
+    const scaleFactor = stage ? stage.stageScale : 1;
+    this.sensors.scale.set(1 / scaleFactor, 1 / scaleFactor, 1 / scaleFactor);
+    this.weapons.scale.set(
+      1 / scaleFactor / 3,
+      1 / scaleFactor / 3,
+      1 / scaleFactor / 3
+    );
+
     // Update the view
     if (prevProps.currentView !== currentView) {
       this.setView(currentView);
     }
     starsUpdate(this, propStars, stars);
-    searchUpdate(this, stars);
+    searchUpdate(this, stars, this.sectors);
     if (this.protractor) {
       if (currentView === "side") {
         this.protractor.updateAngle(pitchAngle);
@@ -319,10 +362,9 @@ class ThreeView extends Component {
     if (!this.animating) return false;
     TWEEN.update(time);
 
-    rotate(this);
     scale(this);
     labels(this);
-    this.props.updatePosition();
+    this.props.updateShip();
     this.controls && this.controls.update();
     this.renderer.render(this.scene, this.cameras[this.currentCamera]);
     this.frame = requestAnimationFrame(this.animate);

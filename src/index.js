@@ -1,7 +1,6 @@
 import React, { Component } from "react";
 import ReactDOM from "react-dom";
 import * as THREE from "three";
-import Three from "./threeView";
 import Measure from "react-measure";
 import StarConfig from "./ui/starConfig";
 import RotateButtons from "./ui/rotateButtons";
@@ -13,16 +12,9 @@ import uuid from "uuid";
 
 import "./style.css";
 import { randomOnSphere, randomFromList } from "./threeHelpers";
+import ThreeHolder from "./threeHolder";
 
-function distanceVector(v1, v2) {
-  var dx = v1.x - v2.x;
-  var dy = v1.y - v2.y;
-  var dz = v1.z - v2.z;
-
-  return Math.sqrt(dx * dx + dy * dy + dz * dz);
-}
-
-function randomOnPlane(radius) {
+export function randomOnPlane(radius) {
   const angle = Math.random() * Math.PI * 2;
   const x = Math.cos(angle) * radius;
   const y = Math.sin(angle) * radius;
@@ -36,7 +28,7 @@ function makeObject(objects, params = {}, innerStage) {
     name: params.name || randomFromList(starList),
     position: params.position || randomOnSphere(500),
     image: params.image || Math.floor(Math.random() * 4),
-    stageScale: params.stageScale || 1,
+    stageScale: params.stageScale || 1 / 4,
     scale: params.scale || 30,
     type: params.type || "star",
     hsl: params.hsl || [Math.random(), 1, 0.5]
@@ -48,7 +40,7 @@ function makeObject(objects, params = {}, innerStage) {
           objects,
           {
             parentId: id,
-            stageScale: 1 / 4,
+            stageScale: 1 / 20,
             type: "planet",
             scale: Math.random() * 20 + 10,
             name: randomFromList(planetList)
@@ -64,6 +56,7 @@ function makeObject(objects, params = {}, innerStage) {
           ...star,
           id: uuid.v4(),
           parentId: id,
+          stageScale: 1 / 4,
           position: { x: 0, y: 0, z: 0 },
           scale: 100
         },
@@ -102,26 +95,7 @@ class App extends Component {
       ? JSON.parse(window.localStorage.getItem("3d-stages"))
       : makeStages()
   };
-  componentDidUpdate() {
-    const {
-      stage,
-      currentStage,
-      shipStage,
-      position,
-      selectedStar
-    } = this.state;
-    const stars = stage.filter(s => s.parentId === currentStage || null);
-    const inStar = stars.find(s => distanceVector(s.position, position) < 10);
-    if (inStar && selectedStar === inStar.id) {
-      this.enterStage(inStar.id, true);
-    }
-    if (
-      distanceVector(position, new THREE.Vector3(0, 0, 0)) > 600 &&
-      shipStage
-    ) {
-      this.leaveStage(true);
-    }
-  }
+
   enterStage = (id, shipInside) => {
     const { stage, edit } = this.state;
     const innerStages = stage.filter(s => s.parentId === id);
@@ -131,20 +105,11 @@ class App extends Component {
     // the simulator from the view.
     if (shipInside) {
       if (innerStages.length === 0) return null;
-      // Set the simulator's position to a random point on the plane of the system
-      const position = new THREE.Vector3(...randomOnPlane(500));
-      // Update the quaternion to point to the center of the system.
-      const quaternion = new THREE.Quaternion();
-      const center = new THREE.Vector3();
-      const m1 = new THREE.Matrix4();
-      m1.lookAt(center, position, new THREE.Vector3(0, 0, 1));
-      quaternion.setFromRotationMatrix(m1);
+
       this.setState({
         currentStage: id,
         shipStage: id,
-        selectedStar: null,
-        position,
-        quaternion
+        selectedStar: null
       });
     } else {
       if (!edit && innerStages.length === 0) return null;
@@ -158,7 +123,6 @@ class App extends Component {
         const newStage = stage ? stage.parentId : null;
         return {
           shipStage: newStage,
-          position: new THREE.Vector3(...Object.values(stage.position)),
           currentStage:
             state.currentStage === state.shipStage
               ? newStage
@@ -173,24 +137,6 @@ class App extends Component {
         selectedStar: null
       };
     });
-  };
-  updatePosition = () => {
-    const {
-      velocity,
-      quaternion,
-      position,
-      stage,
-      currentStage = null
-    } = this.state;
-    const thisStage = stage.find(s => s.id === currentStage);
-    if (velocity === 0) return;
-    const v = new THREE.Vector3();
-    const axis = new THREE.Vector3(0, 0, 1);
-    v.copy(axis).applyQuaternion(quaternion);
-    position.add(
-      v.multiplyScalar(velocity * (thisStage ? 1 / thisStage.stageScale : 1))
-    );
-    this.setState({ position });
   };
   deleteStar = id => {
     this.setState(state => ({
@@ -211,10 +157,6 @@ class App extends Component {
       yaw,
       pitch,
       roll,
-      position,
-      yawAngle,
-      pitchAngle,
-      quaternion,
       search,
       currentView,
       edit,
@@ -227,6 +169,7 @@ class App extends Component {
     } = this.state;
     window.localStorage.setItem("3d-stages", JSON.stringify(stage));
     const stars = stage.filter(s => s.parentId === currentStage || null);
+    console.log("rendered");
     return (
       <div className="App">
         {selectedStar &&
@@ -356,37 +299,26 @@ class App extends Component {
               }}
             >
               {dimensions && (
-                <Three
-                  {...dimensions}
+                <ThreeHolder
+                  dimensions={dimensions}
+                  selectedStar={selectedStar}
+                  selectStar={id => this.setState({ selectedStar: id })}
+                  protractorShown={protractorShown}
+                  search={search}
+                  currentView={currentView}
+                  edit={edit}
+                  sensorsRangeShown={sensorsRangeShown}
+                  weaponsRangeShown={weaponsRangeShown}
+                  currentStage={currentStage}
+                  shipStage={shipStage}
+                  stage={stars}
+                  velocity={velocity}
                   yaw={yaw}
                   pitch={pitch}
                   roll={roll}
-                  yawAngle={yawAngle}
-                  pitchAngle={pitchAngle}
-                  updateProtractorAngle={angle =>
-                    this.setState({
-                      [`${currentView === "top" ? "yaw" : "pitch"}Angle`]: angle
-                    })
-                  }
-                  updatePosition={this.updatePosition}
-                  position={position}
-                  protractorShown={protractorShown}
-                  quaternion={quaternion}
-                  currentStage={currentStage}
-                  shipStage={shipStage}
-                  search={search}
-                  stage={stars}
-                  currentView={currentView}
-                  selectedStar={selectedStar}
-                  selectStar={id => this.setState({ selectedStar: id })}
+                  updateStar={this.updateStar}
                   enterStage={this.enterStage}
-                  updateRotation={params => this.setState(params)}
-                  edit={edit}
-                  updateStarPosition={(id, pos) =>
-                    this.updateStar(id, "position", pos)
-                  }
-                  sensorsRangeShown={sensorsRangeShown}
-                  weaponsRangeShown={weaponsRangeShown}
+                  leaveStage={this.leaveStage}
                 />
               )}
             </div>
