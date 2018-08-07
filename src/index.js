@@ -36,7 +36,7 @@ function makeObject(objects, params = {}, innerStage) {
     name: params.name || randomFromList(starList),
     position: params.position || randomOnSphere(500),
     image: params.image || Math.floor(Math.random() * 4),
-    velocityAdjust: params.velocityAdjust || 1,
+    stageScale: params.stageScale || 1,
     scale: params.scale || 30,
     type: params.type || "star",
     hsl: params.hsl || [Math.random(), 1, 0.5]
@@ -48,7 +48,7 @@ function makeObject(objects, params = {}, innerStage) {
           objects,
           {
             parentId: id,
-            velocityAdjust: 4,
+            stageScale: 1 / 4,
             type: "planet",
             scale: Math.random() * 20 + 10,
             name: randomFromList(planetList)
@@ -123,11 +123,14 @@ class App extends Component {
     }
   }
   enterStage = (id, shipInside) => {
+    const { stage, edit } = this.state;
+    const innerStages = stage.filter(s => s.parentId === id);
     // If the simulator is moving inside of a smaller stage, set it's position to
     // a random location on the radius of the stage.
     // If it's just the view changing, don't change the simulators position and remove
     // the simulator from the view.
     if (shipInside) {
+      if (innerStages.length === 0) return null;
       // Set the simulator's position to a random point on the plane of the system
       const position = new THREE.Vector3(...randomOnPlane(500));
       // Update the quaternion to point to the center of the system.
@@ -144,6 +147,7 @@ class App extends Component {
         quaternion
       });
     } else {
+      if (!edit && innerStages.length === 0) return null;
       this.setState({ currentStage: id, selectedStar: null });
     }
   };
@@ -184,7 +188,7 @@ class App extends Component {
     const axis = new THREE.Vector3(0, 0, 1);
     v.copy(axis).applyQuaternion(quaternion);
     position.add(
-      v.multiplyScalar(velocity * (thisStage ? thisStage.velocityAdjust : 1))
+      v.multiplyScalar(velocity * (thisStage ? 1 / thisStage.stageScale : 1))
     );
     this.setState({ position });
   };
@@ -195,7 +199,6 @@ class App extends Component {
     }));
   };
   updateStar = (id, prop, value) => {
-    console.log(id, prop, value);
     this.setState(state => ({
       stage: state.stage.map(s => (s.id === id ? { ...s, [prop]: value } : s))
     }));
@@ -218,7 +221,9 @@ class App extends Component {
       velocity,
       protractorShown,
       currentStage,
-      shipStage
+      shipStage,
+      sensorsRangeShown,
+      weaponsRangeShown
     } = this.state;
     window.localStorage.setItem("3d-stages", JSON.stringify(stage));
     const stars = stage.filter(s => s.parentId === currentStage || null);
@@ -295,6 +300,26 @@ class App extends Component {
           >
             Protractor
           </button>
+          <button
+            className={`${sensorsRangeShown ? "active" : ""}`}
+            onClick={() =>
+              this.setState(state => ({
+                sensorsRangeShown: !state.sensorsRangeShown
+              }))
+            }
+          >
+            Sensors
+          </button>
+          <button
+            className={`${weaponsRangeShown ? "active" : ""}`}
+            onClick={() =>
+              this.setState(state => ({
+                weaponsRangeShown: !state.weaponsRangeShown
+              }))
+            }
+          >
+            Weapons
+          </button>
           {currentStage && <button onClick={this.leaveStage}>Go Back</button>}
         </div>
         {!edit && (
@@ -360,6 +385,8 @@ class App extends Component {
                   updateStarPosition={(id, pos) =>
                     this.updateStar(id, "position", pos)
                   }
+                  sensorsRangeShown={sensorsRangeShown}
+                  weaponsRangeShown={weaponsRangeShown}
                 />
               )}
             </div>
