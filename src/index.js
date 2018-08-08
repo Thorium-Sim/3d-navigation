@@ -14,12 +14,6 @@ import "./style.css";
 import { randomOnSphere, randomFromList } from "./threeHelpers";
 import ThreeHolder from "./threeHolder";
 
-export function randomOnPlane(radius) {
-  const angle = Math.random() * Math.PI * 2;
-  const x = Math.cos(angle) * radius;
-  const y = Math.sin(angle) * radius;
-  return [x, y, 0];
-}
 function makeObject(objects, params = {}, innerStage) {
   const id = uuid.v4();
   const star = {
@@ -165,11 +159,11 @@ class App extends Component {
       currentStage,
       shipStage,
       sensorsRangeShown,
-      weaponsRangeShown
+      weaponsRangeShown,
+      orbit
     } = this.state;
     window.localStorage.setItem("3d-stages", JSON.stringify(stage));
     const stars = stage.filter(s => s.parentId === currentStage || null);
-    console.log("rendered");
     return (
       <div className="App">
         {selectedStar &&
@@ -216,7 +210,15 @@ class App extends Component {
               Add Star
             </button>
           )}
-
+          <button
+            onClick={() =>
+              this.setState(state => ({
+                orbit: state.selectedStar
+              }))
+            }
+          >
+            Orbit
+          </button>
           <button
             className={`${edit ? "active" : ""}`}
             onClick={() =>
@@ -266,7 +268,9 @@ class App extends Component {
           {currentStage && <button onClick={this.leaveStage}>Go Back</button>}
         </div>
         {!edit && (
-          <RotateButtons updateRotation={params => this.setState(params)} />
+          <RotateButtons
+            updateRotation={params => this.setState({ ...params, orbit: null })}
+          />
         )}
         <ViewButtons
           setView={view => this.setState({ currentView: view })}
@@ -316,6 +320,7 @@ class App extends Component {
                   yaw={yaw}
                   pitch={pitch}
                   roll={roll}
+                  orbit={orbit}
                   updateStar={this.updateStar}
                   enterStage={this.enterStage}
                   leaveStage={this.leaveStage}

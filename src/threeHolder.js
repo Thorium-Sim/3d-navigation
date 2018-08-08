@@ -69,28 +69,43 @@ class ThreeHolder extends Component {
       roll,
       selectedStar,
       enterStage,
-      leaveStage
+      leaveStage,
+      orbit
     } = this.props;
-    const q = new THREE.Quaternion();
     const update = {};
-    if (velocity === 0 && yaw === 0 && pitch === 0 && roll === 0) return;
+    if (!orbit && velocity === 0 && yaw === 0 && pitch === 0 && roll === 0)
+      return;
+    const q = new THREE.Quaternion();
 
     // Rotation
     if (pitch || roll || yaw) {
       q.setFromAxisAngle(new THREE.Vector3(pitch, yaw, roll), Math.PI / 2);
 
-      (update.quaternion = quaternion.multiply(q).normalize()),
-        (update.pitchAngle =
-          pitchAngle > Math.PI || pitchAngle < -Math.PI
-            ? -pitchAngle - pitch * 2
-            : pitchAngle - pitch * 2),
-        (update.yawAngle =
-          yawAngle > Math.PI || yawAngle < -Math.PI
-            ? -yawAngle + yaw * 2
-            : yawAngle + yaw * 2);
+      update.quaternion = quaternion.multiply(q).normalize();
+      update.pitchAngle =
+        pitchAngle > Math.PI || pitchAngle < -Math.PI
+          ? -pitchAngle - pitch * 2
+          : pitchAngle - pitch * 2;
+      update.yawAngle =
+        yawAngle > Math.PI || yawAngle < -Math.PI
+          ? -yawAngle + yaw * 2
+          : yawAngle + yaw * 2;
     }
     const thisStage = stage.find(s => s.id === currentStage);
 
+    const objectOrbiting = stage.find(s => s.id === orbit);
+
+    if (objectOrbiting) {
+      // Update the quaternion to point to the center of the system.
+      const newQuaternion = new THREE.Quaternion();
+      const m1 = new THREE.Matrix4();
+      m1.lookAt(objectOrbiting.position, position, new THREE.Vector3(0, 0, 1));
+
+      newQuaternion.setFromRotationMatrix(m1);
+      const q1 = new THREE.Quaternion();
+      q1.setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI / 2 + 0.01);
+      update.quaternion = newQuaternion.multiply(q1).normalize();
+    }
     // Position
     const v = new THREE.Vector3();
     const axis = new THREE.Vector3(0, 0, 1);
